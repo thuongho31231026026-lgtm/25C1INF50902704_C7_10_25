@@ -3,99 +3,124 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bản đồ Google - Tính toán đường đi</title>
+<title>Game Rắn ăn mồi</title>
 <style>
-#map {
-height: 400px;
-width: 100%;
+body {
+display: flex;
+justify-content: center;
+align-items: center;
+height: 100vh;
+background-color: #333;
+}
+canvas {
+background-color: #000;
+display: block;
+}
+h1 {
+color: white;
+text-align: center;
 }
 </style>
 </head>
 <body>
-<h2>Xác định vị trí giao hàng và Tính toán Đường đi</h2>
-<!-- Form nhập điểm đi, đến và chọn phương tiện di chuyển -->
-<form id="route-form">
-<label for="start">Điểm đi:</label>
-<input type="text" id="start" placeholder="Nhập địa chỉ hoặc tọa độ điểm đi">
-<button type="button" onclick="getCurrentLocation()">Lấy vị trí hiện tại</button>
-<br>
-<label for="end">Điểm đến:</label>
-<input type="text" id="end" placeholder="Nhập địa chỉ hoặc tọa độ điểm đến">
-<br>
-<label for="mode">Chọn phương tiện di chuyển:</label>
-<select id="mode">
-<option value="DRIVING">Ô tô</option>
-<option value="WALKING">Đi bộ</option>
-<option value="BICYCLING">Xe đạp</option>
-<option value="TRANSIT">Giao thông công cộng</option>
-</select>
-<br>
-<button type="button" onclick="calculateRoute()">Xem Đường đi</button>
-</form>
-<!-- Bản đồ và thông tin đường đi -->
-<div id="map"></div>
 <div>
-<p id="distance"></p>
-<p id="duration"></p>
+<h1>Game Rắn Ăn Mồi</h1>
+<canvas id="gameCanvas" width="400" height="400"></canvas>
 </div>
-<!-- Google Maps API -->
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
 <script>
-let map, directionsService, directionsRenderer;
-function initMap() {
-// Khởi tạo bản đồ
-map = new google.maps.Map(document.getElementById('map'), {
-center: { lat: 10.762622, lng: 106.660172 }, // Vị trí mặc định là TPHCM
-zoom: 13
-});
-// Khởi tạo dịch vụ và trình hiển thị đường đi
-directionsService = new google.maps.DirectionsService();
-directionsRenderer = new google.maps.DirectionsRenderer();
-directionsRenderer.setMap(map);
+// Lấy tham chiếu tới canvas và ngữ cảnh 2D
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+// Kích thước ô lưới (mỗi phần của rắn và mồi là 1 ô)
+const gridSize = 20;
+const canvasSize = canvas.width;
+// Tạo mảng rắn với vị trí khởi điểm
+let snake = [{ x: 200, y: 200 }];
+let direction = { x: 0, y: 0 };
+let newDirection = { x: 0, y: 0 };
+let food = generateFood();
+// Tạo biến điểm số
+let score = 0;
+// Hàm khởi tạo vị trí mồi ngẫu nhiên
+function generateFood() {
+return {
+x: Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize,
+y: Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize,
+};
 }
-// Hàm lấy vị trí hiện tại của người dùng
-function getCurrentLocation() {
-if (navigator.geolocation) {
-navigator.geolocation.getCurrentPosition(function(position) {
-const lat = position.coords.latitude;
-const lng = position.coords.longitude;
-const currentLocation = lat + ',' + lng;
-// Đặt vị trí hiện tại vào trường điểm đi
-document.getElementById('start').value = currentLocation;
-}, function() {
-alert('Không thể lấy vị trí hiện tại của bạn!');
-});
-} else {
-alert('Trình duyệt của bạn không hỗ trợ Geolocation.');
+// Hàm vẽ ô vuông trên canvas
+function drawSquare(x, y, color) {
+ctx.fillStyle = color;
+ctx.fillRect(x, y, gridSize, gridSize);
 }
+// Hàm vẽ game (vẽ rắn và mồi)
+function drawGame() {
+ctx.clearRect(0, 0, canvasSize, canvasSize);
+// Vẽ rắn
+for (let part of snake) {
+drawSquare(part.x, part.y, "lime");
 }
-// Hàm tính toán đường đi
-function calculateRoute() {
-const start = document.getElementById('start').value;
-const end = document.getElementById('end').value;
-const mode = document.getElementById('mode').value;
-if (!start || !end) {
-alert('Vui lòng nhập cả điểm đi và điểm đến!');
+// Vẽ mồi
+drawSquare(food.x, food.y, "red");
+// Hiển thị điểm số
+ctx.fillStyle = "white";
+ctx.font = "20px Arial";
+ctx.fillText(`Điểm: ${score}`, 10, 30);
+}
+// Hàm di chuyển rắn
+function moveSnake() {
+const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+// Kiểm tra va chạm tường
+if (head.x < 0 || head.x >= canvasSize || head.y < 0 || head.y >= canvasSize) {
+resetGame();
 return;
 }
-// Tạo yêu cầu tính toán đường đi
-const request = {
-origin: start,
-destination: end,
-travelMode: google.maps.TravelMode[mode]
-};
-directionsService.route(request, function(result, status) {
-if (status === 'OK') {
-directionsRenderer.setDirections(result);
-// Lấy thông tin về khoảng cách và thời gian từ kết quả
-const route = result.routes[0].legs[0];
-document.getElementById('distance').innerHTML = 'Khoảng cách: ' + route.distance.text;
-document.getElementById('duration').innerHTML = 'Thời gian dự kiến: ' + route.duration.text;
+// Kiểm tra va chạm với chính thân mình
+for (let part of snake) {
+if (head.x === part.x && head.y === part.y) {
+resetGame();
+return;
+}
+}
+snake.unshift(head);
+// Kiểm tra nếu rắn ăn mồi
+if (head.x === food.x && head.y === food.y) {
+score++;
+food = generateFood();
 } else {
-alert('Không tìm thấy đường đi!');
+snake.pop(); // Nếu không ăn mồi thì bỏ đuôi rắn đi
 }
-});
 }
+// Hàm đặt lại game khi rắn chết
+function resetGame() {
+snake = [{ x: 200, y: 200 }];
+direction = { x: 0, y: 0 };
+newDirection = { x: 0, y: 0 };
+score = 0;
+}
+// Hàm cập nhật hướng di chuyển dựa trên phím nhấn
+function updateDirection(event) {
+const keyPressed = event.keyCode;
+if (keyPressed === 37 && direction.x === 0) {
+newDirection = { x: -gridSize, y: 0 }; // Trái
+} else if (keyPressed === 38 && direction.y === 0) {
+newDirection = { x: 0, y: -gridSize }; // Lên
+} else if (keyPressed === 39 && direction.x === 0) {
+newDirection = { x: gridSize, y: 0 }; // Phải
+} else if (keyPressed === 40 && direction.y === 0) {
+newDirection = { x: 0, y: gridSize }; // Xuống
+}
+}
+// Vòng lặp chính để cập nhật và vẽ game
+function gameLoop() {
+direction = newDirection;
+moveSnake();
+drawGame();
+}
+// Lắng nghe sự kiện nhấn phím
+window.addEventListener("keydown", updateDirection);
+// Bắt đầu game, chạy vòng lặp mỗi 100ms
+setInterval(gameLoop, 100);
 </script>
 </body>
 </html>
