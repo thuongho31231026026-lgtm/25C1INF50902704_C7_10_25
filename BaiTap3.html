@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bản đồ Google - Tính toán đường đi</title>
+<style>
+#map {
+height: 400px;
+width: 100%;
+}
+</style>
+</head>
+<body>
+<h2>Xác định vị trí giao hàng và Tính toán Đường đi</h2>
+<!-- Form nhập điểm đi, đến và chọn phương tiện di chuyển -->
+<form id="route-form">
+<label for="start">Điểm đi:</label>
+<input type="text" id="start" placeholder="Nhập địa chỉ hoặc tọa độ điểm đi">
+<button type="button" onclick="getCurrentLocation()">Lấy vị trí hiện tại</button>
+<br>
+<label for="end">Điểm đến:</label>
+<input type="text" id="end" placeholder="Nhập địa chỉ hoặc tọa độ điểm đến">
+<br>
+<label for="mode">Chọn phương tiện di chuyển:</label>
+<select id="mode">
+<option value="DRIVING">Ô tô</option>
+<option value="WALKING">Đi bộ</option>
+<option value="BICYCLING">Xe đạp</option>
+<option value="TRANSIT">Giao thông công cộng</option>
+</select>
+<br>
+<button type="button" onclick="calculateRoute()">Xem Đường đi</button>
+</form>
+<!-- Bản đồ và thông tin đường đi -->
+<div id="map"></div>
+<div>
+<p id="distance"></p>
+<p id="duration"></p>
+</div>
+<!-- Google Maps API -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
+<script>
+let map, directionsService, directionsRenderer;
+function initMap() {
+// Khởi tạo bản đồ
+map = new google.maps.Map(document.getElementById('map'), {
+center: { lat: 10.762622, lng: 106.660172 }, // Vị trí mặc định là TPHCM
+zoom: 13
+});
+// Khởi tạo dịch vụ và trình hiển thị đường đi
+directionsService = new google.maps.DirectionsService();
+directionsRenderer = new google.maps.DirectionsRenderer();
+directionsRenderer.setMap(map);
+}
+// Hàm lấy vị trí hiện tại của người dùng
+function getCurrentLocation() {
+if (navigator.geolocation) {
+navigator.geolocation.getCurrentPosition(function(position) {
+const lat = position.coords.latitude;
+const lng = position.coords.longitude;
+const currentLocation = lat + ',' + lng;
+// Đặt vị trí hiện tại vào trường điểm đi
+document.getElementById('start').value = currentLocation;
+}, function() {
+alert('Không thể lấy vị trí hiện tại của bạn!');
+});
+} else {
+alert('Trình duyệt của bạn không hỗ trợ Geolocation.');
+}
+}
+// Hàm tính toán đường đi
+function calculateRoute() {
+const start = document.getElementById('start').value;
+const end = document.getElementById('end').value;
+const mode = document.getElementById('mode').value;
+if (!start || !end) {
+alert('Vui lòng nhập cả điểm đi và điểm đến!');
+return;
+}
+// Tạo yêu cầu tính toán đường đi
+const request = {
+origin: start,
+destination: end,
+travelMode: google.maps.TravelMode[mode]
+};
+directionsService.route(request, function(result, status) {
+if (status === 'OK') {
+directionsRenderer.setDirections(result);
+// Lấy thông tin về khoảng cách và thời gian từ kết quả
+const route = result.routes[0].legs[0];
+document.getElementById('distance').innerHTML = 'Khoảng cách: ' + route.distance.text;
+document.getElementById('duration').innerHTML = 'Thời gian dự kiến: ' + route.duration.text;
+} else {
+alert('Không tìm thấy đường đi!');
+}
+});
+}
+</script>
+</body>
+</html>
